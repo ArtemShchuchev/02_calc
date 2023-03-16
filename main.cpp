@@ -31,7 +31,7 @@ void summVect(std::vector<int>& v1, std::vector<int>& v2, int offset_begin, int 
 		<< std::setw(11) << "1000"
 		<< std::setw(11) << "10000"
 		<< std::setw(11) << "100000"
-		<< "1000000\n"; });
+		<< "1000000\n"; auto start = std::chrono::high_resolution_clock::now(); });
 
 	auto start = std::chrono::high_resolution_clock::now();
 	for (auto it2 = v2.begin() + offset_begin, it = v1.begin() + offset_begin;
@@ -87,7 +87,9 @@ int main(int argc, char** argv)
 				std::thread t3(summVect, std::ref(V1), std::ref(V2), SIZEV[i] / 2, SIZEV[i] - SIZEV[i] / 2, std::ref(time[1]));
 				t3.join();
 				t2.join();
-				workTime.at(i) = time[0] + time[1];
+				//workTime.at(i) = time[0] + time[1];
+				if (time[0] < time[1]) workTime.at(i) = time[1];
+				else workTime.at(i) = time[0];
 			}
 			else if (p == 2)
 			{
@@ -101,7 +103,9 @@ int main(int argc, char** argv)
 				t5.join();
 				t6.join();
 				t7.join();
-				workTime.at(i) = time[0] + time[1] + time[2] + time[3];
+				workTime.at(i) = 0;
+				for (size_t k = 0; k < 4; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
+				//workTime.at(i) = time[0] + time[1] + time[2] + time[3];
 			}
 			else if (p == 3)
 			{
@@ -125,7 +129,7 @@ int main(int argc, char** argv)
 				for (auto& t : t8) t.join();
 
 				workTime.at(i) = 0;
-				for (size_t k = 0; k < 8; ++k) workTime.at(i) += time[k];
+				for (size_t k = 0; k < 8; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
 			}
 			else if (p == 4)
 			{
@@ -149,7 +153,7 @@ int main(int argc, char** argv)
 				for (auto& t : t8) t.join();
 
 				workTime.at(i) = 0;
-				for (size_t k = 0; k < 16; ++k) workTime.at(i) += time[k];
+				for (size_t k = 0; k < 16; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
 			}
 
 		}
