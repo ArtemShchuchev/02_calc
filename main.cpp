@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 				V1.at(j) = j + 1;
 				V2.at(j) = 10;
 			}
-
+			////////////////////////////////////
 			int num_potok = pow(p);					// вычисляю кол-во потоков
 			std::vector<double> time(num_potok);	// время каждого потока
 			//double time[1]{ 0 };
@@ -100,8 +100,8 @@ int main(int argc, char** argv)
 			}
 			for (auto& t : t8) t.join();
 			workTime.at(i) = 0;
-			for (size_t k = 0; k < 1; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
-
+			for (size_t k = 0; k < num_potok; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
+			////////////////////////////////////
 			if (p == 0)
 			{
 				double time[1]{ 0 };
