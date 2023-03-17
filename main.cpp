@@ -52,6 +52,13 @@ void print(std::wstring& str, std::vector<double> workTime)
 		<< workTime.at(3) << "ms\n";
 }
 
+int pow(int p)
+{
+	int res(1);
+	for (int i = 1; i <= p; ++i) res *= 2;
+	return res;
+}
+
 int main(int argc, char** argv)
 {
 	printHeader(L"Параллельные вычисления");
@@ -73,39 +80,102 @@ int main(int argc, char** argv)
 				V2.at(j) = 10;
 			}
 
+			int num_potok = pow(p);					// вычисляю кол-во потоков
+			std::vector<double> time(num_potok);	// время каждого потока
+			//double time[1]{ 0 };
+			int sizebl = SIZEV[i] / num_potok;		// размер блока данных 1го потока
+			std::vector<std::thread> t8(num_potok);	// вектор потоков
+			for (int k = 0; k < num_potok; ++k)
+			{
+				if (k != (num_potok - 1))
+				{
+					t8.at(k) = (std::thread(
+						summVect, std::ref(V1), std::ref(V2), sizebl * k, sizebl, std::ref(time[k])));
+				}
+				else
+				{
+					t8.at(k) = (std::thread(
+						summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * k, std::ref(time[k])));
+				}
+			}
+			for (auto& t : t8) t.join();
+			workTime.at(i) = 0;
+			for (size_t k = 0; k < 1; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
+
 			if (p == 0)
 			{
-				double time(0.0);
-				std::thread t1(summVect, std::ref(V1), std::ref(V2), 0, SIZEV[i], std::ref(time));
-				t1.join();
-				workTime.at(i) = time;
+				double time[1]{ 0 };
+				int sizebl = SIZEV[i] / 1;
+
+				std::vector<std::thread> t8(1);
+				for (size_t k = 0; k < 1; ++k)
+				{
+					if (k != 0)
+					{
+						t8.at(k) = (std::thread(
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, sizebl, std::ref(time[k])));
+					}
+					else
+					{
+						t8.at(k) = (std::thread(
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * k, std::ref(time[k])));
+					}
+				}
+
+				for (auto& t : t8) t.join();
+
+				workTime.at(i) = 0;
+				for (size_t k = 0; k < 1; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
 			}
 			else if (p == 1)
 			{
 				double time[2]{ 0 };
-				std::thread t2(summVect, std::ref(V1), std::ref(V2), 0, SIZEV[i] / 2, std::ref(time[0]));
-				std::thread t3(summVect, std::ref(V1), std::ref(V2), SIZEV[i] / 2, SIZEV[i] - SIZEV[i] / 2, std::ref(time[1]));
-				t3.join();
-				t2.join();
-				//workTime.at(i) = time[0] + time[1];
-				if (time[0] < time[1]) workTime.at(i) = time[1];
-				else workTime.at(i) = time[0];
+				int sizebl = SIZEV[i] / 2;
+
+				std::vector<std::thread> t8(2);
+				for (size_t k = 0; k < 2; ++k)
+				{
+					if (k != 1)
+					{
+						t8.at(k) = (std::thread(
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, sizebl, std::ref(time[k])));
+					}
+					else
+					{
+						t8.at(k) = (std::thread(
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * k, std::ref(time[k])));
+					}
+				}
+
+				for (auto& t : t8) t.join();
+
+				workTime.at(i) = 0;
+				for (size_t k = 0; k < 2; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
 			}
 			else if (p == 2)
 			{
 				double time[4]{ 0 };
 				int sizebl = SIZEV[i] / 4;
-				std::thread t4(summVect, std::ref(V1), std::ref(V2), 0, sizebl, std::ref(time[0]));
-				std::thread t5(summVect, std::ref(V1), std::ref(V2), sizebl, sizebl, std::ref(time[1]));
-				std::thread t6(summVect, std::ref(V1), std::ref(V2), sizebl*2, sizebl, std::ref(time[2]));
-				std::thread t7(summVect, std::ref(V1), std::ref(V2), sizebl*3, SIZEV[i] - sizebl * 3, std::ref(time[3]));
-				t4.join();
-				t5.join();
-				t6.join();
-				t7.join();
+
+				std::vector<std::thread> t8(4);
+				for (size_t k = 0; k < 4; ++k)
+				{
+					if (k != 3)
+					{
+						t8.at(k) = (std::thread(
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, sizebl, std::ref(time[k])));
+					}
+					else
+					{
+						t8.at(k) = (std::thread(
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * k, std::ref(time[k])));
+					}
+				}
+
+				for (auto& t : t8) t.join();
+
 				workTime.at(i) = 0;
 				for (size_t k = 0; k < 4; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
-				//workTime.at(i) = time[0] + time[1] + time[2] + time[3];
 			}
 			else if (p == 3)
 			{
@@ -122,7 +192,7 @@ int main(int argc, char** argv)
 					else
 					{
 						t8.at(k) = (std::thread(
-							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * 7, std::ref(time[k]) ));
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * k, std::ref(time[k]) ));
 					}
 				}
 
@@ -146,7 +216,7 @@ int main(int argc, char** argv)
 					else
 					{
 						t8.at(k) = (std::thread(
-							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * 15, std::ref(time[k]) ));
+							summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[i] - sizebl * k, std::ref(time[k]) ));
 					}
 				}
 
@@ -155,7 +225,6 @@ int main(int argc, char** argv)
 				workTime.at(i) = 0;
 				for (size_t k = 0; k < 16; ++k) if (workTime.at(i) < time[k]) workTime.at(i) = time[k];
 			}
-
 		}
 
 		print(potokStr.at(p), workTime);
