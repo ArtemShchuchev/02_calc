@@ -27,13 +27,15 @@ void summVect(std::vector<int>& v1, std::vector<int>& v2,
 	int offset_begin, int num_byte,
 	std::chrono::steady_clock::time_point& st)
 {
-	std::call_once(flag, [&st](){std::wcout << std::left << L"Количество аппаратных ядер: "
-		<< std::thread::hardware_concurrency() << "\n\n"
-		<< std::setw(11) << " "
-		<< std::setw(11) << "1000"
-		<< std::setw(11) << "10000"
-		<< std::setw(11) << "100000"
-		<< "1000000\n"; st = std::chrono::steady_clock::now(); });
+	using namespace std;
+	call_once(flag, [&st](){
+		wcout << left << L"Количество аппаратных ядер: "
+			<< thread::hardware_concurrency() << "\n\n" << setw(11) << " "
+			<< setw(10) << "1000"
+			<< setw(10) << "10000"
+			<< setw(11) << "100000"
+			<< "1000000\n";
+		st = chrono::steady_clock::now(); });
 	
 	for (auto it2 = v2.begin() + offset_begin, it = v1.begin() + offset_begin;
 		it != v1.begin() + offset_begin + num_byte; ++it, ++it2)
@@ -42,11 +44,12 @@ void summVect(std::vector<int>& v1, std::vector<int>& v2,
 // вывод инфо
 void print(std::wstring& str, std::vector<double> workTime)
 {
-	std::wcout << std::left
-		<< std::setw(11) << str
-		<< workTime.at(0) << std::setw(4) << "ms"
-		<< workTime.at(1) << std::setw(4) << "ms"
-		<< workTime.at(2) << std::setw(4) << "ms"
+	using namespace std;
+	wcout.setf(ios::fixed);
+	wcout << setprecision(3) << left << setw(11) << str
+		<< workTime.at(0) << setw(5) << "ms"
+		<< workTime.at(1) << setw(5) << "ms"
+		<< workTime.at(2) << setw(5) << "ms"
 		<< workTime.at(3) << "ms\n";
 }
 
