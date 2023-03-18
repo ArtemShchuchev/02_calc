@@ -92,16 +92,27 @@ int main(int argc, char** argv)
 {
 	printHeader(L"Параллельные вычисления");
 
-	//std::vector<double> workTime(VARSIZE);	// здась буду хранить время работы, для каждого размера
 	std::array <std::array<double, VARSIZE>, NUMP> workTime{ 0 };
 	std::vector<int> V1, V2;				// вектора для сложения
 	
-	std::vector<std::thread> thrs;			// потоки
+	//std::vector<std::thread> thrs;			// потоки
 	
 	for (int p = 0; p < NUMP; ++p)
 	{
 		int num_potok = pow(p);				// вычисляю кол-во потоков
-		thrs.resize(num_potok);				// устанавливаю кол-во потоков
+		//thrs.resize(num_potok);				// устанавливаю кол-во потоков
+
+		/*
+		Вы писали: "я бы не стал переиспользовать вектор потоков
+		std::vector<std::thread> thrs; - пусть лучше на каждый
+		прогон создается новый внутри цикла по количеству потоков
+		(так не будет зависимости от времени деструкции предыдущего
+		прогона на следующем)
+
+		Не совсем понял, о чем это?
+		Может так (строка ниже, хотя ообой разницы не увидел)...
+		*/
+		std::vector<std::thread> thrs(num_potok);			// потоки
 
 		for (int vs = 0; vs < VARSIZE; ++vs)
 		{
@@ -112,6 +123,12 @@ int main(int argc, char** argv)
 				V1.at(j) = j + 1;
 				V2.at(j) = 10;
 			}
+			/*
+			Смущает время выполнения...
+			у меня 8 ядер на процессоре, и при этом
+			задача деленная на 8 потоков, почти ни когда не 
+			бывает самой быстрой
+			*/
 			////////////////////////////////////
 			int sizebl = SIZEV[vs] / num_potok;	// размер блока данных 1го потока
 
@@ -131,9 +148,10 @@ int main(int argc, char** argv)
 						summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[vs] - sizebl * k, std::ref(start)
 					));
 				}
-				thrs.at(k).join();
+				//thrs.at(k).join();	// это гораздо быстрее
 			}
-			//for (auto& t : thrs) t.join();
+			/* Это точно правильно? (что-то оооочень медленно) */
+			for (auto& t : thrs) t.join();	// прошлый раз закоментил, т.к. очень медленно
 			auto end = std::chrono::steady_clock::now();
 			std::chrono::duration<double, std::milli> delta = end - start;
 			workTime.at(p).at(vs) = delta.count();
@@ -141,9 +159,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-		print(workTime);
-
-
+	print(workTime);
 	
 	std::wcout << "\n";
 
