@@ -49,11 +49,12 @@ void summVect(std::vector<int>& v1, std::vector<int>& v2,
 	
 	Вставил картинку со своим исполнением на ГитХаб (ну, один из вариантов,
 	она всякий раз немного разная, но теперь все логично и быстро).
+	
+	И запись стала как то понятней и проще!
 	*/
 	auto end = v1.begin() + offset_begin + num_byte;
-	for (auto it2 = v2.begin() + offset_begin, it = v1.begin() + offset_begin;
-		it != end; ++it, ++it2)
-		*it += *it2;
+	auto it2 = v2.begin() + offset_begin, it = v1.begin() + offset_begin;
+	for ( ; it != end; ++it, ++it2) *it += *it2;
 }
 
 // вывод инфо
@@ -142,6 +143,12 @@ int main(int argc, char** argv)
 					));
 				}
 			}
+			/*
+				И все таки, какая разница где писать join и там, и там 
+				почти тот же цикл? Почему в одном случае он дожидается 
+				окончания предыдущего потока, а в другом запускает все 
+				разом, при чем не факт что первым запустится первый??
+			*/
 			for (auto& t : thrs) t.join();
 			auto end = std::chrono::steady_clock::now();
 			std::chrono::duration<double, std::milli> delta = end - start;
