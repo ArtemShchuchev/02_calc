@@ -17,20 +17,81 @@
 Первый запущенный поток должен вывести на экран доступное количество аппаратных ядер.
 */
 
-std::once_flag flag;
 // 1000, 10 000, 100 000 и 1 000 000 элементов
 const int SIZEV[]{ 1000, 10000, 100000, 1000000 };
 const int VARSIZE = sizeof SIZEV / sizeof SIZEV[0];	// кол-во вариантов размера массива
-const int NUMP(5);							// кол-во вариантов для потоков
-std::array<std::wstring, NUMP> potokStr{L"1 поток", L"2 потока", L"4 потока", L"8 потоков", L"16 потоков"};
+const int NUMP(5);									// кол-во вариантов для потоков
+std::array<std::wstring, NUMP> potokStr{
+	L"1 поток", L"2 потока", L"4 потока", L"8 потоков", L"16 потоков"};
+
+// объявления функций
+static void summVect(std::vector<int>::iterator v1_it,
+	std::vector<int>::iterator v2_it, const int num_byte,
+	std::chrono::steady_clock::time_point& st);
+static void print(const std::array <std::array<double, VARSIZE>, NUMP>& workTime);
+static int pow(int p);
+
+
+int main(int argc, char** argv)
+{
+	printHeader(L"Параллельные вычисления");
+
+	std::array <std::array<double, VARSIZE>, NUMP> workTime{ 0 };
+	std::vector<int> V1, V2;				// вектора для сложения
+	
+	for (int p(0); p < NUMP; ++p)
+	{
+		int num_potok = pow(p);				// вычисляю кол-во потоков
+		std::vector<std::thread> thrs(num_potok);	// потоки
+
+		for (size_t vs(0); vs < VARSIZE; ++vs)
+		{
+			V1.resize(SIZEV[vs]);			// устанавливаю размер данных
+			V2.resize(SIZEV[vs]);			// устанавливаю размер данных
+			for (int j(0); j < SIZEV[vs]; ++j) // заполняю как то
+			{
+				V1[j] = j + 1;
+				V2[j] = 10;
+			}
+			////////////////////////////////////
+
+			auto sizebl = SIZEV[vs] / num_potok;	// размер блока данных 1го потока
+			auto v1_it = V1.begin(), v2_it = V2.begin();
+			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+			for (int k(0); k < num_potok; ++k)
+			{
+				int num_byte = (k != (num_potok - 1)) ? sizebl : V1.end() - v1_it;
+
+				thrs[k] = (std::thread(
+					summVect, v1_it, v2_it, num_byte, std::ref(start) ));
+
+				v1_it += sizebl;
+				v2_it += sizebl;
+			}
+			for (auto& t : thrs) t.join();	// ждет окончания join потоков
+			auto end = std::chrono::steady_clock::now();
+			std::chrono::duration<double, std::milli> delta = end - start;
+			workTime[p][vs] = delta.count();
+		}
+	}
+
+	print(workTime);
+	
+	std::wcout << "\n";
+
+	return 0;
+}
+
 
 // сумму 2х векторов складывает в 1ый вектор
-void summVect(std::vector<int>& v1, std::vector<int>& v2,
-	int offset_begin, int num_byte,
+static void summVect(std::vector<int>::iterator v1_it,
+	std::vector<int>::iterator v2_it, const int num_byte,
 	std::chrono::steady_clock::time_point& st)
 {
 	using namespace std;
-	call_once(flag, [&st](){
+
+	static std::once_flag flag;
+	std::call_once(flag, [&st](){
 		wcout << left << L"Количество аппаратных ядер: "
 			<< thread::hardware_concurrency() << "\n\n" << setw(11) << " "
 			<< setw(10) << "1000"
@@ -52,41 +113,40 @@ void summVect(std::vector<int>& v1, std::vector<int>& v2,
 	
 	И запись стала как то понятней и проще!
 	*/
-	auto end = v1.begin() + offset_begin + num_byte;
-	auto it2 = v2.begin() + offset_begin, it = v1.begin() + offset_begin;
-	for ( ; it != end; ++it, ++it2) *it += *it2;
+	auto end = v1_it + num_byte;
+	for (; v1_it != end; ++v1_it, ++v2_it) {
+		*v1_it += *v2_it;
+	}
 }
 
 // вывод инфо
-void print(const std::array <std::array<double, VARSIZE>, NUMP>& workTime)
+static void print(const std::array <std::array<double, VARSIZE>, NUMP>& workTime)
 {
 	using namespace std;
 	wcout.setf(ios::fixed);
 	
-	// заполняю массив минимумов значениями для 1го потока
+	// ищу поток с минимальным значением времени, сохраняю время
 	std::array<double, VARSIZE> mintime{ 0 };
-	for (size_t vs = 0; vs < workTime[0].size(); ++vs)
+	for (size_t vs(0); vs < VARSIZE; ++vs)
 	{
 		mintime[vs] = workTime[0][vs];
-	}
-
-	// ищу поток с минимальным значением времени, сохраняю время
-	for (size_t vs = 0; vs < workTime[0].size(); ++vs)
-	{
-		for (size_t p = 1; p < workTime.size(); p++)
+		for (size_t p(1); p < NUMP; ++p)
 		{
-			if (mintime[vs] > workTime[p][vs]) mintime[vs] = workTime[p][vs];
+			if (mintime[vs] > workTime[p][vs])
+				mintime[vs] = workTime[p][vs];
 		}
 	}
 
-	for (size_t p = 0; p < workTime.size(); p++)
+	// вывод в консоль
+	for (size_t p(0); p < NUMP; ++p)
 	{
-		wcout << setprecision(3) << left << setw(11) << potokStr.at(p);
-		for (size_t vs = 0; vs < mintime.size(); ++vs)
+		wcout << setprecision(3) << left << setw(11) << potokStr[p];
+		for (size_t vs(0); vs < VARSIZE; ++vs)
 		{
-			if (mintime[vs] == workTime[p][vs]) consoleCol(col::br_cyan);
+			bool itsMin(mintime[vs] == workTime[p][vs]);
+			if (itsMin) consoleCol(col::br_cyan);
 			wcout << workTime[p][vs] << setw(5) << "ms";
-			consoleCol(col::cancel);
+			if (itsMin) consoleCol(col::cancel);
 		}
 		wcout << "\n";
 	}
@@ -95,65 +155,10 @@ void print(const std::array <std::array<double, VARSIZE>, NUMP>& workTime)
 	consoleCol(col::cancel);
 }
 
-int pow(int p)
+// возведение в степень
+static int pow(const int p)
 {
 	int res(1);
-	for (int i = 1; i <= p; ++i) res *= 2;
+	for (int i(1); i <= p; ++i) res *= 2;
 	return res;
-}
-
-int main(int argc, char** argv)
-{
-	printHeader(L"Параллельные вычисления");
-
-	std::array <std::array<double, VARSIZE>, NUMP> workTime{ 0 };
-	std::vector<int> V1, V2;				// вектора для сложения
-	
-	for (int p = 0; p < NUMP; ++p)
-	{
-		int num_potok = pow(p);				// вычисляю кол-во потоков
-		std::vector<std::thread> thrs(num_potok);	// потоки
-
-		for (int vs = 0; vs < VARSIZE; ++vs)
-		{
-			V1.resize(SIZEV[vs]);			// устанавливаю размер данных
-			V2.resize(SIZEV[vs]);			// устанавливаю размер данных
-			for (int j = 0; j < SIZEV[vs]; ++j) // заполняю как то
-			{
-				V1.at(j) = j + 1;
-				V2.at(j) = 10;
-			}
-			////////////////////////////////////
-			int sizebl = SIZEV[vs] / num_potok;	// размер блока данных 1го потока
-
-
-			auto start = std::chrono::steady_clock::now();
-			for (int k = 0; k < num_potok; ++k)
-			{
-				if (k != (num_potok - 1))
-				{
-					thrs.at(k) = (std::thread(
-						summVect, std::ref(V1), std::ref(V2), sizebl * k, sizebl, std::ref(start)
-					));
-				}
-				else
-				{
-					thrs.at(k) = (std::thread(
-						summVect, std::ref(V1), std::ref(V2), sizebl * k, SIZEV[vs] - sizebl * k, std::ref(start)
-					));
-				}
-			}
-			for (auto& t : thrs) t.join();	// ждет окончания join потоков
-			auto end = std::chrono::steady_clock::now();
-			std::chrono::duration<double, std::milli> delta = end - start;
-			workTime.at(p).at(vs) = delta.count();
-			////////////////////////////////////
-		}
-	}
-
-	print(workTime);
-	
-	std::wcout << "\n";
-
-	return 0;
 }
